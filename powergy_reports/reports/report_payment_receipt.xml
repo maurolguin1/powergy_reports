@@ -1,0 +1,85 @@
+<odoo>
+<data>
+<template id="account.report_payment_receipt">
+<t t-name="account.report_payment_receipt">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <h3><strong>Recibo de Pago: <span t-field="o.name"/></strong></h3>
+                        <div class="row mt64">
+                            <div class="col-xs-6" t-if="o.payment_date">
+                                <strong>Fecha de Pago: </strong> <span t-field="o.payment_date"/>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-xs-6" t-if="o.partner_type">
+                                <t t-if="o.partner_type == 'customer'">
+                                    <strong>Cliente: </strong>
+                                </t>
+                                <t t-if="o.partner_type == 'supplier'">
+                                    <strong>Proveedor: </strong>
+                                </t><span t-field="o.partner_id"/>
+                            </div>
+                            <div class="col-xs-6" t-if="o.payment_method_id">
+                                <strong>Método de Pago: </strong><span t-field="o.payment_method_id.name"/>
+                            </div>
+                        </div>
+                        <div class="row mb64">
+                            <div class="col-xs-6" t-if="o.amount">
+                                <strong>Monto Pagado: </strong><span t-field="o.amount" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
+                            </div>
+                            <div class="col-xs-6">
+                                <strong>RFC: </strong><span t-field="o.partner_id.vat"/>
+                            </div>
+                            <div class="col-xs-6">
+                                <strong>Uso de CFDI: </strong><span t-field="o.l10n_mx_edi_cfdi_name"/>
+                            </div>
+                            <div class="col-xs-6">
+                                <strong>Recidencia Fiscal: </strong><span t-field="o.partner_id.country_id"/>
+                            </div>                            
+                            <div class="col-xs-6" t-if="o.communication">
+                                <strong>Memo: </strong><span t-field="o.communication"/>
+                            </div>
+                            <div class="col-xs-6">
+                                <strong>Moneda: </strong><span t-field="o.currency_id"/>
+                            </div>
+                            <div class="col-xs-6">
+                                <strong>Referencia Bancarias: </strong><span t-field="o.bank_reference"/>
+                            </div>                           
+                            <div class="col-xs-6">
+                                <strong>Cuenta Emisor: </strong><span t-field="o.journal_id"/>
+                            </div>                              
+                            <div class="col-xs-6">
+                                <strong>CLABE receptor: </strong><span t-field="o.partner_id.clabe_banco" />
+                            </div>
+
+                        </div>
+                        <table class="table table-condensed">
+                            <thead>
+                                <tr>
+                                    <th>Fecha factura</th>
+                                    <th>Número factura</th>
+                                    <th class="text-right">Importe original</th>
+                                    <th class="text-right">Monto pagado</th>
+                                    <th class="text-right">Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="o.invoice_ids" t-as="inv">
+                                    <td><span t-field="inv.date_invoice"/></td>
+                                    <td><span t-field="inv.number"/></td>
+                                    <td class="text-right"><span t-field="inv.amount_total"/></td>
+                                    <td class="text-right"><span t-esc="inv.amount_total - inv.residual" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/></td>
+                                    <td class="text-right"><span t-field="inv.residual"/></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </t>
+</template>
+</data>
+</odoo>

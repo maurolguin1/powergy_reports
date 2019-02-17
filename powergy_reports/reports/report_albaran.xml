@@ -1,0 +1,676 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+        <template id="stock.report_picking">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="o">
+                    <t t-call="web.external_layout">
+                        <div class="page">
+                            <div class="row">
+                                <div class="col-xs-6">
+                                    <div t-if="o.move_lines and o.move_lines[0].partner_id and o.move_lines[0].partner_id.id != o.partner_id.id">
+                                        <span><strong>Dirección de Envío:</strong></span>
+                                        <div t-field="o.move_lines[0].partner_id" t-options="{&quot;widget&quot;: &quot;contact&quot;, &quot;fields&quot;: [&quot;address&quot;, &quot;name&quot;, &quot;phone&quot;], &quot;no_marker&quot;: True, &quot;phone_icons&quot;: True}"/>
+                                    </div>
+                                    <div t-if="o.picking_type_id.code != 'internal' and (not o.move_lines or not o.move_lines[0].partner_id) and o.picking_type_id.warehouse_id.partner_id">
+                                        <span><strong>Dirección de almacén:</strong></span>
+                                        <div t-field="o.picking_type_id.warehouse_id.partner_id" t-options="{&quot;widget&quot;: &quot;contact&quot;, &quot;fields&quot;: [&quot;address&quot;, &quot;name&quot;, &quot;phone&quot;], &quot;no_marker&quot;: True, &quot;phone_icons&quot;: True}"/>
+                                    </div>
+                                </div>
+                                <div class="col-xs-5 col-xs-offset-1">
+                                    <div t-if="o.picking_type_id.code=='incoming' and o.partner_id">
+                                        <span><strong>Dirección de la empresa:</strong></span>
+                                    </div>
+                                    <div t-if="o.picking_type_id.code=='internal' and o.partner_id">
+                                        <span><strong>Dirección de almacén:</strong></span>
+                                    </div>
+                                    <div t-if="o.picking_type_id.code=='outgoing' and o.partner_id">
+                                        <span><strong>Dirección del Cliente:</strong></span>
+                                    </div>
+                                    <div t-if="o.partner_id" name="partner_header">
+                                        <div t-field="o.partner_id" t-options="{&quot;widget&quot;: &quot;contact&quot;, &quot;fields&quot;: [&quot;name&quot;, &quot;phone&quot;], &quot;no_marker&quot;: True, &quot;phone_icons&quot;: True}"/>
+                                        <p t-if="o.sudo().partner_id.vat"><t t-esc="o.company_id.country_id.vat_label or 'RFC'"/>: <span t-field="o.sudo().partner_id.vat"/></p>
+                                    </div>
+                                </div>
+                            </div>                             
+                            <br/>
+                            <img t-att-src="'/report/barcode/?type=%s&amp;value=%s&amp;width=%s&amp;height=%s' % ('Code128', o.name, 600, 100)" style="width:300px;height:50px" class="pull-right mb16"/>      
+                            <h1 t-field="o.name" class="mt0 pull-left"/>
+                            <div class="clearfix"></div> 
+                            <div class="row mt32 mb32" id="informations">
+                                 <div class="col-xs-3" t-if="o.owner_id">
+                                    <strong>Owner:</strong>
+                                    <p t-field="o.owner_id.name"/>
+                                </div>
+                                 <div class="col-xs-3" t-if="o.observations">
+                                    <strong>Observaciones:</strong>
+                                    <p t-field="o.observations"/>
+                                </div>
+                            </div>
+                            <div class="clearfix"></div>                                                         
+                            <table class="table table-condensed">
+                                <thead>
+                                    <tr>
+                                        <th t-if="o.origin"><strong>Orden (Origen)</strong></th>
+                                        <th><strong>OP</strong></th>
+                                        <th><strong>Fecha de compromiso</strong></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td t-if="o.origin">
+                                            <span t-field="o.origin" />
+                                        </td>
+                                        <td>
+                                            <span t-field="o.op_text" />
+                                        </td>
+                                        <td>
+                                            <span t-field="o.date" />
+                                        </td>
+                                    </tr>
+                                </tbody>
+
+                            </table>
+                            <br/>
+                            <br/>
+                        <!-- Inicia la tabla de productos -->
+                            <table class="table table-condensed" t-if="o.move_lines" width="100%" style="margin:auto;">
+                                <t t-set="has_barcode" t-value="any([move_lines.product_id and move_lines.product_id.sudo().barcode or move_lines.package_id for move_lines in o.move_line_ids])"/>
+                                <t t-set="has_serial_number" t-value="o.move_line_ids.filtered(lambda ml: ml.lot_id or ml.lot_name)" groups="stock.group_production_lot" />
+
+                                <thead t-if="'/IN/' in o.name" >
+                                    <tr>
+                                        <th width="25%" class="text-center">Referencia y Nombre del Producto</th>
+                                        <th width="15%" class="text-center">Serie/Lote/Pediment</th>
+                                        <th width="10%" class="text-center">Ud</th>
+                                        <th width="10%" class="text-center">Cantidad</th>
+                                        <th width="10%" class="text-center">Done</th>
+                                        <th width="15%" class="text-center">C. Unitario</th>
+                                        <th width="15%" class="text-center">C. Total</th>
+                                    </tr>
+                                </thead>
+                                <thead t-if="'/OUT/' in o.name" >
+                                    <tr>
+                                        <th width="25%" class="text-center">Referencia y Nombre del Producto</th>
+                                        <th width="15%" class="text-center">Serie/Lote/Pediment</th>
+                                        <th width="10%" class="text-center">Ud</th>
+                                        <th width="10%" class="text-center">Cantidad</th>
+                                        <th width="10%" class="text-center">Done</th>
+
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-set="subtotal" t-value="0" />
+                                    <t t-set="tax" t-value="0"/>
+                                    <t t-foreach="o.move_lines.sorted(key=lambda m: m.product_id.id)" t-as="move"> 
+                                        <t t-foreach="o.purchase_id.order_line.sorted(key=lambda m: m.product_id.id)" t-as="po">
+                                            <t t-if="move.product_id == po.product_id">
+                                                <tr t-if="'/IN/' in o.name">
+                                                <t t-set="ctotal" t-value="0"/>
+                                                <td width="25%" class="text-center">
+                                                    <span t-field="move.product_id.display_name"/>
+                                                </td>
+                                                <td width="15%" class="text-center">
+                                                    <t t-if="move.move_line_ids.sorted(key=lambda ml: ml.location_id.id)">
+                                                        <t t-set="cser" t-value="0" />
+                                                        <t t-foreach="move.move_line_ids.sorted(key=lambda ml: ml.location_id.id)" t-as="ser">
+                                                            <t t-if="cser > 0" ><span>, </span></t>
+                                                            <span t-field="ser.lot_id"/>
+                                                            <t t-set="cser" t-value="cser + 1" />
+                                                        </t>
+                                                    </t>
+                                                </td>
+                                                <td width="10%" class="text-center">
+                                                    <span t-field="move.product_uom" />
+                                                </td>
+                                                <td width="10%" class="text-center">
+                                                    <span t-field="move.product_uom_qty" />
+                                                </td>
+                                                <td width="10%" class="text-center">
+                                                    <span t-field="move.quantity_done"/>
+                                                </td>
+                                                <td width="15%" class="text-center">
+                                                    <span t-field="po.price_unit"/>
+                                                </td>
+                                                <td width="15%" class="text-center">
+                                                    <span t-esc="'{0:.3f}'.format(po.price_unit * move.quantity_done)"/>
+                                                </td>
+                                                <t t-set="subtotal" t-value="subtotal + (po.price_unit * move.quantity_done)" />
+                                                <t t-set="tax" t-value="tax + ((po.price_tax / po.product_qty)*(move.quantity_done))"/>
+                                                </tr>
+                                            </t>
+                                        </t>
+                                        
+                                        <t t-foreach="o.sale_id.order_line.sorted(key=lambda m: m.product_id.id)" t-as="po">
+                                            <t t-if="move.product_id == po.product_id">
+                                               <tr t-if="'/OUT/' in o.name" >
+
+                                                <t t-set="ctotal" t-value="0"/>
+                                                <td width="25%" class="text-center">
+                                                    <span t-field="move.product_id.display_name"/>
+                                                </td>
+                                                <td width="15%" class="text-center">
+                                                    <t t-if="move.move_line_ids.sorted(key=lambda ml: ml.location_id.id)">
+                                                        <t t-set="cser" t-value="0" />
+                                                        <t t-foreach="move.move_line_ids.sorted(key=lambda ml: ml.location_id.id)" t-as="ser">
+                                                            <t t-if="cser > 0" ><span>, </span></t>
+                                                            <span t-field="ser.lot_id"/>
+                                                            <t t-set="cser" t-value="cser + 1" />
+                                                        </t>
+                                                    </t>
+                                                </td>
+                                                <td width="10%" class="text-center">
+                                                    <span t-field="move.product_uom" />
+                                                </td>
+                                                <td width="10%" class="text-center">
+                                                    <span t-field="move.product_uom_qty" />
+                                                </td>
+                                                <td width="10%" class="text-center">
+                                                    <span t-field="move.quantity_done"/>
+                                                </td>
+                                        </tr>
+                                        </t>
+                                        </t>
+                                    </t>
+                                    
+                                </tbody>
+                            </table>
+                            <br/><br/>
+                            <div t-if="'/IN/' in o.name">
+                            <table  class="table table-condensed" t-if="o.move_lines" width="100%" style="margin:auto;" >
+                                    <tr>
+                                        <td width="70%">   
+                                        </td>
+                                        <td class="text-center" width="15%">
+                                            <strong>Sub Total: </strong>
+                                        </td>
+                                        <td class="text-center" width="15%">
+                                            <span t-esc="'{0:.3f}'.format(subtotal)"/>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td width="70%">   
+                                        </td>
+                                        <td class="text-center" width="15%">
+                                            <strong>Impuesto: </strong>
+                                        </td>
+                                        <td class="text-center" width="15%">
+                                            <span t-esc="'{0:.2f}'.format(tax)"/>
+                                        </td>
+                                    </tr>
+                                    <tr>      
+                                        <td width="70%">   
+                                        </td>                                     
+                                        <td class="text-center" width="15%">
+                                            <strong>Total: </strong>
+                                        </td>
+                                        <td class="text-center" width="15%">
+                                            <span  t-esc="'{0:.3f}'.format(subtotal + tax)"/>
+                                        </td>
+                                    </tr> 
+                            </table>
+                            </div>
+
+                            <table class="table table-condensed" t-if="o.entire_package_ids and o.picking_type_entire_packs">
+                                <thead>
+                                    <tr>
+                                        <th width="25%">Paquete</th>
+                                        <th width="25%" class="text-center">Código de barras</th>
+                                        <th width="25%" class="text-left">Origen</th>
+                                        <th width="25%" class="text-right">Destino</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr t-foreach="o.entire_package_ids.sorted(key=lambda p: p.name)" t-as="package">
+                                        <t t-set="package" t-value="package.width_context({'picking_id':o.id})"/>
+                                        <td><span t-field="package.name"/></td>
+                                        <td><img t-att-src="'/report/barcode/?type=%s&amp;value=%s&amp;width=%s&amp;height=%s' % ('Code128', package.name, 600, 100)" style="width:300px    ;height:50px"/></td>
+                                        <td><span t-field="package.current_source_location_id"/></td>
+                                        <td><span t-field="package.current_destination_location_id"/></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <table t-if="'/OUT/' in o.name" style="margin: auto;">
+
+                                <br/><br/><br/><br/><br/><br/><br/>
+                                <tr background="#000000">
+                                    <td>
+                                        <spand style="text-align: center;">______________________________</spand>
+                                        <h5 style="text-align: center;">Almacen</h5>
+                                    </td>
+                                    <td width="30%"></td>
+                                    <td>
+                                        <spand style="text-align: center;">______________________________</spand>
+                                        <h5 style="text-align: center;">Recibe</h5>
+                                    </td>
+                                </tr>
+                            </table>
+                            <table t-if="'/IN/' in o.name" style="margin: auto;">
+
+                                <br/><br/><br/><br/><br/><br/><br/>
+                                <tr background="#000000">
+                                    <td>
+                                        <spand style="text-align: center;">______________________________</spand>
+                                        <h5 style="text-align: center;">Almacen</h5>
+                                    </td>
+                                    <td width="30%"></td>
+                                    <td>
+                                        <spand style="text-align: center;">______________________________</spand>
+                                        <h5 style="text-align: center;">Proveedor</h5>
+                                    </td>
+                                </tr>
+                            </table>  
+
+                            <p t-if="o.state in ['draft', 'waiting', 'confirmed']">
+                                No tiene ningún producto reservado para este picking. Haga clic en el botón 'Reservar'
+                                para comprobar si los productos están disponibles.
+                            </p>
+                            <p t-field="o.note"/>
+                        </div>
+                    </t>
+                </t>
+            </t>
+        </template>
+
+        <template id="report_picking_proforma">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="o">
+                    <t t-call="web.external_layout">
+                        <div class="page">
+                            <div class="row">
+                                <div class="col-xs-6">
+                                    <div t-if="o.move_lines and o.move_lines[0].partner_id and o.move_lines[0].partner_id.id != o.partner_id.id">
+                                        <span><strong>Dirección de Envío:</strong></span>
+                                        <div t-field="o.move_lines[0].partner_id" t-options="{&quot;widget&quot;: &quot;contact&quot;, &quot;fields&quot;: [&quot;address&quot;, &quot;name&quot;, &quot;phone&quot;], &quot;no_marker&quot;: True, &quot;phone_icons&quot;: True}"/>
+                                    </div>
+                                    <div t-if="o.picking_type_id.code != 'internal' and (not o.move_lines or not o.move_lines[0].partner_id) and o.picking_type_id.warehouse_id.partner_id">
+                                        <span><strong>Dirección de almacén:</strong></span>
+                                        <div t-field="o.picking_type_id.warehouse_id.partner_id" t-options="{&quot;widget&quot;: &quot;contact&quot;, &quot;fields&quot;: [&quot;address&quot;, &quot;name&quot;, &quot;phone&quot;], &quot;no_marker&quot;: True, &quot;phone_icons&quot;: True}"/>
+                                    </div>
+                                </div>
+                                <div class="col-xs-5 col-xs-offset-1">
+                                    <div t-if="o.picking_type_id.code=='incoming' and o.partner_id">
+                                        <span><strong>Dirección de la empresa:</strong></span>
+                                    </div>
+                                    <div t-if="o.picking_type_id.code=='internal' and o.partner_id">
+                                        <span><strong>Dirección de almacén:</strong></span>
+                                    </div>
+                                    <div t-if="o.picking_type_id.code=='outgoing' and o.partner_id">
+                                        <span><strong>Dirección del Cliente:</strong></span>
+                                    </div>
+                                    <div t-if="o.partner_id" name="partner_header">
+                                        <div t-field="o.partner_id" t-options="{&quot;widget&quot;: &quot;contact&quot;, &quot;fields&quot;: [&quot;name&quot;, &quot;phone&quot;], &quot;no_marker&quot;: True, &quot;phone_icons&quot;: True}"/>
+                                        <p t-if="o.sudo().partner_id.vat"><t t-esc="o.company_id.country_id.vat_label or 'RFC'"/>: <span t-field="o.sudo().partner_id.vat"/></p>
+                                    </div>
+                                </div>
+                            </div>                             
+                            <br/> 
+
+                            <h1 style="width: 100%;">Pre Factura <span  t-field="o.name"/> </h1>
+                            <br/>
+                            <div class="row mt32 mb32" id="informations" t-if="o.sale_id">
+                            <table width="100%">
+                                <tr>
+                                    <td width="30%" align="center">
+                                        <div>
+                                            <strong>Sitio:</strong>
+                                            <p t-field="o.sale_id.name_site"/>
+                                        </div>
+                                    </td>
+                                    <td width="30%" align="center">   
+                                        <div>
+                                            <strong>Division/GOA:</strong>
+                                            <p t-field="o.sale_id.client_order_ref"/>
+                                        </div>
+                                    </td>
+                                    <td width="30%" align="center">
+                                        <div>
+                                            <strong>Estado del pedido:</strong>
+                                            <p t-field="o.sale_id.invoice_status"/>
+                                        </div>
+                                    </td> 
+                                </tr>
+                                <tr>
+                                    <td width="30%" align="center">
+                                       <div>
+                                            <strong>No. Adrisa/Grafo:</strong>
+                                            <p t-field="o.sale_id.no_adrisa"/>
+                                        </div>
+                                    </td>
+                                    <td width="30%" align="center">
+                                        <div>
+                                            <strong>Luegar de entrega:</strong>
+                                            <p t-field="o.sale_id.deliver_pro"/>
+                                        </div>
+                                    </td>
+                                    <td width="30%" align="center">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td width="30%" align="center">   
+                                        <div>
+                                            <strong>Pedido Marco:</strong>
+                                            <p t-field="o.sale_id.opportunity_id.name"/>
+                                        </div>
+                                    </td>
+                                    <td width="30%" align="center">
+                                        <div>
+                                            <strong>Folio S. Patrimonial:</strong>
+                                            <p t-field="o.sale_id.folio_patrimonial"/>
+                                        </div>
+                                    </td>
+                                    <td width="30%" align="center">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td width="30%" align="center">
+                                        <div>
+                                            <strong>Pedidos Individuales:</strong>
+                                            <span t-field="o.sale_id.indiv_orders" />
+                                        </div>
+                                    </td>
+                                    <td width="30%" align="center">
+                                        <div>
+                                            <strong>Fianza:</strong>
+                                            <p t-field="o.sale_id.fianza"/>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+<!--
+                                    <div t-if="o.sale_id.confirmation_date and o.sale_id.state not in ['draft','sent']" class="col-xs-3">
+                                        <strong>Fecha ordenada:</strong>
+                                        <p t-field="o.sale_id.confirmation_date"/>
+                                    </div>
+                                    <div t-if="o.sale_id.date_order and o.sale_id.state in ['draft','sent']" class="col-xs-3">
+                                        <strong>Fecha del presupuesto:</strong>
+                                        <p t-field="o.sale_id.date_order"/>
+                                    </div>
+
+                                    <div name="payment_term" t-if="o.sale_id.payment_term_id" class="col-xs-3">
+                                        <strong>Términos de Pago:</strong>
+                                        <p t-field="o.sale_id.payment_term_id"/>
+                                    </div>
+                                     <div class="col-xs-3">
+                                        <strong>Moneda:</strong>
+                                        <p t-field="o.sale_id.currency_id"/>
+                                    </div>               
+                                    <div t-if="o.sale_id.validity_date and o.sale_id.state in ['draft', 'sent']" class="col-xs-3">
+                                        <strong>Fecha de caducidad:</strong>
+                                        <p t-field="o.sale_id.validity_date"/>
+                                    </div>   
+
+                                    <div t-if="o.sale_id.numor_customer" class="col-xs-3">
+                                        <strong>Numero de pedido cliente:</strong>
+                                        <p t-field="o.sale_id.numor_customer"/>
+                                    </div>
+                                    <div t-if="o.sale_id.user_id.name" class="col-xs-3">
+                                        <strong>Comercial:</strong>
+                                        <p t-field="o.sale_id.user_id"/>
+                                    </div>
+
+                                   <div t-if="o.sale_id.delivery_time" class="col-xs-3">
+                                        <strong>Tiempo de Entrega:</strong>
+                                        <p t-field="o.sale_id.delivery_time"/>
+                                    </div>
+-->
+
+                                </div>
+
+                                <div class="row mt32 mb32" id="informations" t-if="o.purchase_id">
+                                                        <table>
+                                <tr>
+                                    <td width="30%" align="center">
+                                        <div>
+                                            <strong>Sitio:</strong>
+                                            <p t-field="o.sale_id.name_site"/>
+                                        </div>
+                                    </td>
+                                    <td width="30%" align="center">   
+                                        <div>
+                                            <strong>Division/GOA:</strong>
+                                            <p t-field="o.sale_id.client_order_ref"/>
+                                        </div>
+                                    </td>
+                                    <td width="30%" align="center">
+                                        <div>
+                                            <strong>Estado del pedido:</strong>
+                                            <p t-field="o.sale_id.invoice_status"/>
+                                        </div>
+                                    </td> 
+                                </tr>
+                                <tr>
+                                    <td width="30%" align="center">
+                                       <div>
+                                            <strong>No. Adrisa/Grafo:</strong>
+                                            <p t-field="o.sale_id.no_adrisa"/>
+                                        </div>
+                                    </td>
+                                    <td width="30%" align="center">
+                                        <div>
+                                            <strong>Luegar de entrega:</strong>
+                                            <p t-field="o.sale_id.deliver_pro"/>
+                                        </div>
+                                    </td>
+                                    <td width="30%" align="center">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td width="30%" align="center">   
+                                        <div>
+                                            <strong>Pedido Marco:</strong>
+                                            <p t-field="o.sale_id.opportunity_id.name"/>
+                                        </div>
+                                    </td>
+                                    <td width="30%" align="center">
+                                        <div>
+                                            <strong>Folio S. Patrimonial:</strong>
+                                            <p t-field="o.sale_id.folio_patrimonial"/>
+                                        </div>
+                                    </td>
+                                    <td width="30%" align="center">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td width="30%" align="center">
+                                        <div>
+                                            <strong>Pedidos Individuales:</strong>
+                                            <span t-field="o.sale_id.indiv_orders" />
+                                        </div>
+                                    </td>
+                                    <td width="30%" align="center">
+                                        <div>
+                                            <strong>Fianza:</strong>
+                                            <p t-field="o.sale_id.fianza"/>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+<!--
+                                    <div t-if="o.sale_id.client_order_ref" class="col-xs-3">
+                                        <strong>Su referencia:</strong>
+                                        <p t-field="o.sale_id.client_order_ref"/>
+                                    </div>
+                                    <div t-if="o.sale_id.confirmation_date and o.sale_id.state not in ['draft','sent']" class="col-xs-3">
+                                        <strong>Fecha ordenada:</strong>
+                                        <p t-field="o.sale_id.confirmation_date"/>
+                                    </div>
+                                    <div t-if="o.sale_id.date_order and o.sale_id.state in ['draft','sent']" class="col-xs-3">
+                                        <strong>Fecha del presupuesto:</strong>
+                                        <p t-field="o.sale_id.date_order"/>
+                                    </div>
+                                    <div t-if="o.sale_id.user_id.name" class="col-xs-3">
+                                        <strong>Comercial:</strong>
+                                        <p t-field="o.sale_id.user_id"/>
+                                    </div>
+                                    <div name="payment_term" t-if="o.sale_id.payment_term_id" class="col-xs-3">
+                                        <strong>Términos de Pago:</strong>
+                                        <p t-field="o.sale_id.payment_term_id"/>
+                                    </div>
+                                     <div class="col-xs-3">
+                                        <strong>Moneda:</strong>
+                                        <p t-field="o.sale_id.currency_id"/>
+                                    </div>               
+                                    <div t-if="o.sale_id.validity_date and o.sale_id.state in ['draft', 'sent']" class="col-xs-3">
+                                        <strong>Fecha de caducidad:</strong>
+                                        <p t-field="o.sale_id.validity_date"/>
+                                    </div>
+                                     <div t-if="o.sale_id.name_site" class="col-xs-3">
+                                        <strong>Nombre de sitio:</strong>
+                                        <p t-field="o.sale_id.name_site"/>
+                                    </div>   
+                                     <div t-if="o.sale_id.no_adrisa" class="col-xs-3">
+                                        <strong>No. Adrisa/Grafo:</strong>
+                                        <p t-field="o.sale_id.no_adrisa"/>
+                                    </div>   
+                                     <div t-if="o.sale_id.folio_patrimonial" class="col-xs-3">
+                                        <strong>Folio S. Patrimonial:</strong>
+                                        <p t-field="o.sale_id.folio_patrimonial"/>
+                                    </div>   
+                                    <div t-if="o.sale_id.opportunity_id.name" class="col-xs-3">
+                                        <strong>Marco:</strong>
+                                        <p t-field="o.sale_id.opportunity_id.name"/>
+                                    </div> 
+                                    <div t-if="o.sale_id.deliver_pro" class="col-xs-3">
+                                        <strong>Luegar de entrega:</strong>
+                                        <p t-field="o.sale_id.deliver_pro"/>
+                                    </div>
+                                    <div t-if="o.sale_id.numor_customer" class="col-xs-3">
+                                        <strong>Numero de pedido cliente:</strong>
+                                        <p t-field="o.sale_id.numor_customer"/>
+                                    </div>
+                                    <div t-if="o.sale_id.fianza" class="col-xs-3">
+                                        <strong>Fianza:</strong>
+                                        <p t-field="o.sale_id.fianza"/>
+                                    </div> 
+                                    <div t-if="o.sale_id.delivery_time" class="col-xs-3">
+                                        <strong>Tiempo de Entrega:</strong>
+                                        <p t-field="o.sale_id.delivery_time"/>
+                                    </div>
+                                    <div t-if="o.sale_id.indiv_orders">
+                                        <strong>Pedidos Individuales:</strong>
+                                        <span t-field="o.sale_id.indiv_orders" />
+                                    </div>
+-->
+                                </div>
+
+
+                            <div class="clearfix"></div>                                                         
+                            <table class="table table-condensed">
+                                <thead>
+                                    <tr>
+                                        <th t-if="o.origin"><strong>Orden (Origen)</strong></th>
+                                        <th><strong>OP</strong></th>
+                                        <th><strong>Fecha de compromiso</strong></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td t-if="o.origin">
+                                            <span t-field="o.origin" />
+                                        </td>
+                                        <td>
+                                            <span t-field="o.op_text" />
+                                        </td>
+                                        <td>
+                                            <span t-field="o.date" />
+                                        </td>
+                                    </tr>
+                                </tbody>
+
+                            </table>
+                            <br/>
+                            <table class="table table-condensed" t-if="o.move_lines" width="100%" style="margin:auto;">
+                                <t t-set="has_barcode" t-value="any([move_lines.product_id and move_lines.product_id.sudo().barcode or move_lines.package_id for move_lines in o.move_line_ids])"/>
+                                <thead>
+                                    <tr>
+                                        <th width="60%" class="text-center">Referencia y Nombre del Producto</th>
+                                        <th width="25%" class="text-center">Serie/Lote/Pediment</th>
+                                        <th width="5%" class="text-center">Ud</th>
+                                        <th width="10%" class="text-center">Cantidad</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-set="subtotal" t-value="0" />
+                                    <t t-set="tax" t-value="0"/>
+                                    <tr t-foreach="o.move_lines.sorted(key=lambda m: m.product_id.id)" t-as="move"> 
+                                        <t t-set="ctotal" t-value="0"/>
+                                        <td width="25%" class="text-center">
+                                            <span t-field="move.product_id.display_name"/>
+                                        </td>
+                                        <td width="15%" class="text-center">
+                                            <t t-if="move.move_line_ids.sorted(key=lambda ml: ml.location_id.id)">
+                                                <t t-set="cser" t-value="0" />
+                                                <t t-foreach="move.move_line_ids.sorted(key=lambda ml: ml.location_id.id)" t-as="ser">
+                                                    <t t-if="cser > 0" ><span>, </span></t>
+                                                    <span t-field="ser.lot_id"/>
+                                                    <t t-set="cser" t-value="cser + 1" />
+                                                </t>
+                                            </t>
+                                        </td>
+                                        <td width="10%" class="text-center">
+                                            <span t-field="move.product_uom" />
+                                        </td>
+                                        <td width="10%" class="text-center">
+                                            <span t-field="move.product_uom_qty" />
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <table class="table table-condensed" t-if="o.entire_package_ids and o.picking_type_entire_packs">
+                                <thead>
+                                    <tr>
+                                        <th width="25%">Paquete</th>
+                                        <th width="25%" class="text-center">Código de barras</th>
+                                        <th width="25%" class="text-left">Origen</th>
+                                        <th width="25%" class="text-right">Destino</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr t-foreach="o.entire_package_ids.sorted(key=lambda p: p.name)" t-as="package">
+                                        <t t-set="package" t-value="package.width_context({'picking_id':o.id})"/>
+                                        <td><span t-field="package.name"/></td>
+                                        <td><img t-att-src="'/report/barcode/?type=%s&amp;value=%s&amp;width=%s&amp;height=%s' % ('Code128', package.name, 600, 100)" style="width:300px    ;height:50px"/></td>
+                                        <td><span t-field="package.current_source_location_id"/></td>
+                                        <td><span t-field="package.current_destination_location_id"/></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <!--<table style="margin: auto;">
+
+                                <br/><br/><br/><br/><br/><br/><br/>
+                                <tr background="#000000">
+                                    <td>
+                                        <spand style="text-align: center;">______________________________</spand>
+                                        <h5 style="text-align: center;">Almacen</h5>
+                                    </td>
+                                    <td width="30%"></td>
+                                    <td>
+                                        <spand style="text-align: center;">______________________________</spand>
+                                        <h5 style="text-align: center;">Proveedor</h5>
+                                    </td>
+                                </tr>
+                            </table> 
+                            -->
+
+                            <p t-if="o.state in ['draft', 'waiting', 'confirmed']">
+                                No tiene ningún producto reservado para este picking. Haga clic en el botón 'Reservar'
+                                para comprobar si los productos están disponibles.
+                            </p>
+                            <p t-field="o.note"/>
+                        </div>
+                    </t>
+                </t>
+            </t>
+        </template>
+        <report
+            string="ProForma"
+            id="reporte_proforma_albaran"
+            model="stock.picking"
+            report_type="qweb-pdf"
+            name="powergy_reports.report_picking_proforma"
+            file="powergy_reports.report_albaran"
+            />
+    </data>
+</odoo>
