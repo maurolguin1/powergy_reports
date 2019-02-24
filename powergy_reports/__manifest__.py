@@ -11,6 +11,7 @@
     		 'reports/report_purchase_order.xml',
              'reports/report_factura.xml',
              'reports/report_delivery_split.xml',
+             'reports/report_mrporder.xml',
              'reports/report_payment_receipt.xml',
              'reports/report_saleorder.xml',             
              'reports/report_albaran.xml' ],
