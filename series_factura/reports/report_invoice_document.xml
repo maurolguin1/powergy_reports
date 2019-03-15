@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+<data>
+  <template id="report_invoice_layouted_inherit_series" inherit_id="sale.report_invoice_layouted">
+      <xpath expr="//tbody[@class='invoice_tbody']/t[1]/t[2]/tr/td[1]" position="inside">
+          <t t-if="l.serie">
+            <br/>
+            <span>No Serie: </span><span t-field="l.serie"/>
+          </t>
+          <!-- <t t-if="l.l10n_mx_edi_customs_number">
+            <br/>
+            <span>Pedimentos: </span><span t-field="l.l10n_mx_edi_customs_number"/>
+          </t> -->
+      </xpath>
+  </template>
+
+  <template id="report_invoice_layouted_inherit_series_info" inherit_id="account.report_invoice_document">
+      <xpath expr="//div[@name='reference']" position="after">
+          <div name="adrisa" class="col-xs-2" t-if="o.adri_graf">
+              <strong>No Adrisa/Grafo:</strong>
+              <p t-field="o.adri_graf"/>
+          </div>
+          <div name="folio_p" class="col-xs-2" t-if="o.folio_patr">
+              <strong>Folio S. Patrimonial:</strong>
+              <p t-field="o.folio_patr"/>
+          </div>
+          <div name="marco" class="col-xs-2" t-if="o.marco">
+              <strong>Marco:</strong>
+              <p t-field="o.marco"/>
+          </div>
+          <div name="npedido" class="col-xs-2" t-if="o.n_pedido">
+              <strong>No Pedido Cliente:</strong>
+              <p t-field="o.n_pedido"/>
+          </div>
+      </xpath>
+  </template>
+  
+  <!-- <template id="report_invoice_layouted_inherit_series_info" inherit_id="account.report_invoice_document">
+      <xpath expr="//div[@name='reference']" position="after">
+          <div name="reference" class="col-xs-2" t-if="o.reference">
+              <strong>Referencia:</strong>
+              <p t-field="o.reference"/>
+          </div>
+      </xpath>
+  </template> -->
+</data>
+</odoo>
+
+
+
+            
